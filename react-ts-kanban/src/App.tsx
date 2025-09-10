@@ -1,36 +1,69 @@
-import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { type Column, type Task } from './types'; // Import our types!
+// src/App.tsx
+import { useState } from "react";
+import { type Column as ColumnType, type Task } from "./types";
+import { Column } from "./components/Column"; // 1. Import the new component
 
-// Initial data for our board
-const initialColumns: Column[] = [
-  { id: 'todo', title: 'To Do', tasks: [{ id: '1', title: 'Task 1', content: 'Do something' }] },
-  { id: 'inprogress', title: 'In Progress', tasks: [{ id: '2', title: 'Task 2', content: 'Work on it' }] },
-  { id: 'done', title: 'Done', tasks: [] },
+const initialColumns: ColumnType[] = [
+  {
+    id: "todo",
+    title: "To Do",
+    tasks: [{ id: "1", title: "Task 1", content: "Do something" }],
+  },
+  {
+    id: "inprogress",
+    title: "In Progress",
+    tasks: [{ id: "2", title: "Task 2", content: "Work on it" }],
+  },
+  { id: "done", title: "Done", tasks: [] },
 ];
 
 function App() {
-  // Use TypeScript with useState to define the state's type
-  const [columns, setColumns] = useState<Column[]>(initialColumns);
+  const [columns, setColumns] = useState<ColumnType[]>(initialColumns);
+  const handleDragEnd = (task: Task, destinationColumnId: string) => {
+    setColumns((prevColumns) => {
+      // Find the source column
+      let sourceColumn: ColumnType | undefined;
+      let taskIndex = -1;
 
+      for (const col of prevColumns) {
+        const index = col.tasks.findIndex((t) => t.id === task.id);
+        if (index !== -1) {
+          sourceColumn = col;
+          taskIndex = index;
+          break;
+        }
+      }
+
+      // If task not found, do nothing
+      if (!sourceColumn) return prevColumns;
+
+      const newColumns = [...prevColumns];
+
+      // Remove the task from the source column
+      const sourceTasks = [...sourceColumn.tasks];
+      sourceTasks.splice(taskIndex, 1);
+      const sourceColIndex = newColumns.findIndex(
+        (col) => col.id === sourceColumn!.id
+      );
+      newColumns[sourceColIndex] = { ...sourceColumn, tasks: sourceTasks };
+
+      // Add the task to the destination column
+      const destColIndex = newColumns.findIndex(
+        (col) => col.id === destinationColumnId
+      );
+      const destColumn = newColumns[destColIndex];
+      const destTasks = [...destColumn.tasks];
+      destTasks.push(task);
+      newColumns[destColIndex] = { ...destColumn, tasks: destTasks };
+
+      return newColumns;
+    });
+  };
   return (
     <div className="flex h-screen w-full gap-4 p-4 bg-gray-100">
       {columns.map((column) => (
-        <div key={column.id} className="flex-1">
-          <h2 className="text-xl font-bold mb-4">{column.title}</h2>
-          <div className="flex flex-col gap-4">
-            {column.tasks.map((task) => (
-              <Card key={task.id}>
-                <CardHeader>
-                  <CardTitle>{task.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>{task.content}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+        // 2. Use the new Column component
+        <Column key={column.id} column={column} onTaskDrop={handleDragEnd} />
       ))}
     </div>
   );
